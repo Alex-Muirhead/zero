@@ -119,7 +119,7 @@
 
 
 #let format-uncertainty = it => {
-  /// pm, digits, mode, concise, tight
+  /// pm, digits, mode, concise, tight, math
   let pm = it.pm
   if pm == none { return () }
   let is-symmetric = type(pm.first()) != array
@@ -144,10 +144,16 @@
   )
   if is-symmetric {
     if it.concise { ("(", pm.first(), ")") }
-    else {
+    else if it.math {
       (
         math.class("normal", none),
         math.class(if it.tight {"normal"} else {"binary"}, sym.plus.minus),
+        pm.first()
+      )
+    } else {
+      let space = if it.tight { sym.space.hair } else { sym.space.narrow }
+      (
+        space, sym.plus.minus, space,
         pm.first()
       )
     }
@@ -217,12 +223,14 @@
     
     let power = [#it.base#text(size: script-size, baseline: superscript-baseline, exponent)]
     if it.product == none { (power,) }
-    let space = if it.tight { sym.space.hair } else { sym.space.narrow }
-    (
-      box(), 
-      space, it.product, space, 
-      power
-    )
+    else {
+      let space = if it.tight { sym.space.hair } else { sym.space.narrow }
+      (
+        box(), 
+        space, it.product, space, 
+        power
+      )
+    }
   }
 }
 
