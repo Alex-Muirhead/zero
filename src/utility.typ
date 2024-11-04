@@ -29,3 +29,21 @@
 #assert.eq(shift-decimal-left("123", "456", -5), ("12345600", ""))
 #assert.eq(shift-decimal-left("0", "0012", -4), ("12", ""))
 #assert.eq(shift-decimal-left("0", "0012", -2), ("", "12"))
+
+#let get-text-metrics(font: auto, glyph) = {
+  let text = if font == auto { text } else { text.with(font: font) }
+  
+  let text-depth = measure(text(
+    top-edge: "baseline", 
+    bottom-edge: "descender", 
+    glyph
+  )).height
+  
+  let text-height = measure(text(
+    top-edge: "cap-height", 
+    bottom-edge: "baseline", 
+    glyph
+  )).height
+
+  (height: text-height, depth: text-depth, size: text.size)
+}

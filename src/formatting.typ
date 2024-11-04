@@ -1,4 +1,5 @@
 #import "state.typ": num-state, group-state
+#import "utility.typ": get-text-metrics
 #import "parsing.typ": *
 
 
@@ -150,12 +151,33 @@
         pm.first()
       )
     }
-  } else {
+  } else if it.math {
      (
       math.attach(
         none, 
         t: sym.plus + pm.at(0), 
         b: sym.minus + pm.at(1)
+      ),
+    )
+  } else {
+    // A consistent way of measuring the font size to use for sub/sup. 
+    // We use `0` as we expect this to often be a trailing number.
+    // Any length of string / chars can be used here.
+    let text-metrics = get-text-metrics("0")
+    // The size of a glyph isn't the size you set in `text`!
+    let glyph-fraction = text.size / text-metrics.height
+    
+    // Ensure sup/superscript are symmetric around number
+    let stacked-height = text-metrics.height + 2 * text-metrics.depth * 80%
+    let script-size = stacked-height / 2 * glyph-fraction * 80%
+    
+    let plus = text(size: script-size, sym.plus + pm.at(0))
+    let minus = text(size: script-size, sym.minus + pm.at(1))
+    (
+      box(
+        height: stacked-height,
+        baseline: text-metrics.depth,
+        stack(plus, minus, spacing: 1fr)
       ),
     )
   }
@@ -164,18 +186,41 @@
 
 
 #let format-power = it => {
-  /// x, base, product, positive-sign-exponent, tight, 
+  /// x, base, product, positive-sign-exponent, tight, math
   if it.exponent == none { return () }
   
   let (sign, integer, fractional) = decompose-signed-float-string(it.exponent)
   let exponent = format-comma-number((sign: sign, int: integer, frac: fractional, digits: auto, group: false, positive-sign: it.positive-sign-exponent, decimal-separator: it.decimal-separator))
 
-  let power = math.attach([#it.base], t: [#exponent])
-  if it.product == none { (power,) }
-  else {
+  if it.math {
+    let power = math.attach([#it.base], t: [#exponent])
+    if it.product == none { (power,) }
+    else {
+      (
+        box(),
+        math.class(if it.tight {"normal"} else {"binary"}, it.product),
+        power
+      )
+    }
+  } else {
+    // A consistent way of measuring the font size to use for sub/sup. 
+    // We use `0` as we expect this to often be a trailing number.
+    // Any length of string / chars can be used here.
+    let text-metrics = get-text-metrics("0")
+    // The size of a glyph isn't the size you set in `text`!
+    let glyph-fraction = text.size / text-metrics.height
+    
+    // Ensure sup/superscript are symmetric around number
+    let stacked-height = text-metrics.height + 2 * text-metrics.depth * 80%
+    let script-size = stacked-height / 2 * glyph-fraction * 80%
+    let superscript-baseline = text-metrics.depth - text-metrics.height
+    
+    let power = [#it.base#text(size: script-size, baseline: superscript-baseline, exponent)]
+    if it.product == none { (power,) }
+    let space = if it.tight { sym.space.hair } else { sym.space.narrow }
     (
-      box(),
-      math.class(if it.tight {"normal"} else {"binary"}, it.product),
+      box(), 
+      space, it.product, space, 
       power
     )
   }
@@ -211,6 +256,7 @@
     digits: it.digits,
     concise: concise-uncertainty,
     tight: it.tight,
+    math: it.math,
     mode: it.uncertainty-mode,
     decimal-separator: it.decimal-separator
   )
@@ -222,6 +268,7 @@
     product: if omit-mantissa {none} else {it.product},
     positive-sign-exponent: it.positive-sign-exponent,
     tight: it.tight,
+    math: it.math,
     decimal-separator: it.decimal-separator
   )
   
